@@ -9,8 +9,7 @@ const io = ioserver(server, { pingInterval: 30000, pingTimeout: 30000 });
 
 const PORT = process.env.PORT || 5000;
 
-// Fix: improve any below
-const users: any[] = [];
+const users: { username: string; color: string; active: boolean }[] = [];
 const isTyping: string[] = [];
 
 const colors = [
@@ -25,7 +24,10 @@ const colors = [
   "#e18038",
   "#e15138",
   "#000000",
-  "#8c8c8c"
+  "#8c8c8c",
+  "#38a2e1",
+  "#386ce1",
+  "#6938e1"
 ];
 
 // Use cross-origin resource sharing for communication between 2 locations
@@ -40,7 +42,8 @@ app.get("/", (req, res) => {
 app.get("/api/user/:username", (req, res) => {
   const username = req.params.username;
   const userIndex = users.find(
-    (user) => user.username.toLowerCase() === username.toLowerCase()
+    (user: { username: string }) =>
+      user.username.toLowerCase() === username.toLowerCase()
   );
 
   if (!userIndex) {
@@ -59,8 +62,10 @@ io.on("connection", (socket: any) => {
     const userOnlineIndex = users.findIndex(
       (user: { username: string }) => user.username === socket.username
     );
+    if (userOnlineIndex !== -1) {
+      users[userOnlineIndex].active = false;
+    }
 
-    users[userOnlineIndex].active = false;
     socket.emit("leave_inactivity");
   };
 
@@ -89,6 +94,10 @@ io.on("connection", (socket: any) => {
       (user: { username: string }) => user.username === socket.username
     );
 
+    if (userOnlineIndex === -1) {
+      return;
+    }
+
     const newMessage = {
       username: users[userOnlineIndex].username,
       color: users[userOnlineIndex].color,
@@ -100,7 +109,6 @@ io.on("connection", (socket: any) => {
     io.emit("new_message", newMessage);
   };
 
-  // Fix: on send message also call changedTyping with false
   const changedTyping = (state: boolean) => {
     // Reset activityChecker();
     activityChecker();
@@ -149,7 +157,12 @@ io.on("connection", (socket: any) => {
       (user: { username: string }) => user.username === socket.username
     );
 
-    users[userOnlineIndex].active = false;
+    if (userOnlineIndex !== -1) {
+      users[userOnlineIndex].active = false;
+    } else {
+      socket.emit("leave_inactivity");
+      return;
+    }
   });
 
   // Changed typing
@@ -191,4 +204,22 @@ io.on("connection", (socket: any) => {
 
 server.listen(PORT, () => {
   console.log(`Server listening on port: ${PORT}`);
+});
+
+// Close everything on SIGTERM signal
+process.on("SIGTERM", () => {
+  server.close(() => {
+    io.close(() => {
+      process.exit(0);
+    });
+  });
+});
+
+// Close everything on SIGINT signal
+process.on("SIGINT", () => {
+  server.close(() => {
+    io.close(() => {
+      process.exit(0);
+    });
+  });
 });

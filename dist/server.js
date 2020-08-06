@@ -30,7 +30,6 @@ const app = express_1.default();
 const server = http.createServer(app);
 const io = socket_io_1.default(server, { pingInterval: 30000, pingTimeout: 30000 });
 const PORT = process.env.PORT || 5000;
-// Fix: improve any below
 const users = [];
 const isTyping = [];
 const colors = [
@@ -45,7 +44,10 @@ const colors = [
     "#e18038",
     "#e15138",
     "#000000",
-    "#8c8c8c"
+    "#8c8c8c",
+    "#38a2e1",
+    "#386ce1",
+    "#6938e1"
 ];
 // Use cross-origin resource sharing for communication between 2 locations
 app.use(cors_1.default());
@@ -67,11 +69,12 @@ app.get("/api/user/:username", (req, res) => {
 // Socket.io logic
 io.on("connection", (socket) => {
     const activityKicker = () => {
-        console.log("FIREEEE");
         // Send user leave message directly on clicking disconnect
         sendMessage(2);
         const userOnlineIndex = users.findIndex((user) => user.username === socket.username);
-        users[userOnlineIndex].active = false;
+        if (userOnlineIndex !== -1) {
+            users[userOnlineIndex].active = false;
+        }
         socket.emit("leave_inactivity");
     };
     let logoffTimer;
@@ -92,6 +95,9 @@ io.on("connection", (socket) => {
     // Send message to all users
     const sendMessage = (messageType, message) => {
         const userOnlineIndex = users.findIndex((user) => user.username === socket.username);
+        if (userOnlineIndex === -1) {
+            return;
+        }
         const newMessage = {
             username: users[userOnlineIndex].username,
             color: users[userOnlineIndex].color,
@@ -101,9 +107,7 @@ io.on("connection", (socket) => {
         };
         io.emit("new_message", newMessage);
     };
-    // Fix: on send message also call changedTyping with false
     const changedTyping = (state) => {
-        console.log(socket.username, "CHANGED TYPING");
         // Reset activityChecker();
         activityChecker();
         if (state) {
@@ -137,7 +141,13 @@ io.on("connection", (socket) => {
         // Send user leave message directly on clicking disconnect
         sendMessage(1);
         const userOnlineIndex = users.findIndex((user) => user.username === socket.username);
-        users[userOnlineIndex].active = false;
+        if (userOnlineIndex !== -1) {
+            users[userOnlineIndex].active = false;
+        }
+        else {
+            socket.emit("leave_inactivity");
+            return;
+        }
     });
     // Changed typing
     socket.on("changed_typing", (state) => {
@@ -165,5 +175,25 @@ io.on("connection", (socket) => {
 });
 server.listen(PORT, () => {
     console.log(`Server listening on port: ${PORT}`);
+});
+process.on("SIGTERM", () => {
+    console.info("SIGTERM signal received.");
+    console.log("Closing http server.");
+    server.close(() => {
+        console.log("Http server closed.");
+        io.close(() => {
+            process.exit(0);
+        });
+    });
+});
+process.on("SIGINT", () => {
+    console.info("SIGINT signal received.");
+    console.log("Closing http server.");
+    server.close(() => {
+        console.log("Http server closed.");
+        io.close(() => {
+            process.exit(0);
+        });
+    });
 });
 //# sourceMappingURL=server.js.map
