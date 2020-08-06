@@ -9,26 +9,9 @@ const io = ioserver(server);
 
 const PORT = process.env.PORT || 5000;
 
-const users = [
-  {
-    username: "iSnaek",
-    color: "#381953"
-  },
-  {
-    username: "UsedToLoveYa",
-    color: "#939128"
-  }
-];
-const isTyping = [
-  {
-    username: "iSnaek",
-    color: "#381953"
-  },
-  {
-    username: "UsedToLoveYa",
-    color: "#939128"
-  }
-];
+// Fix: improve any below
+const users: any[] = [];
+const isTyping: string[] = [];
 
 const colors = ["#183734", "#885522"];
 
@@ -56,17 +39,72 @@ app.get("/api/user/:username", (req, res) => {
 
 // Socket.io logic
 io.on("connection", (socket: any) => {
-  console.log(`Socket attached as ${socket}`);
+  // Send roomData to all users
+  const sendRoomData = () => {
+    const roomData = {
+      onlineUsers: users,
+      typingUsers: isTyping
+    };
+
+    io.emit("new_roomdata", roomData);
+  };
+
+  // Send message to all users
+  const sendMessage = (messageType: number, message?: string) => {
+    const userOnlineIndex = users.findIndex(
+      (user: { username: string }) => user.username === socket.username
+    );
+
+    const newMessage = {
+      username: users[userOnlineIndex].username,
+      color: users[userOnlineIndex].color,
+      type: messageType,
+      message: message ? message : "",
+      timestamp: ""
+    };
+
+    io.emit("new_message", newMessage);
+  };
 
   socket.on("join_chatroom", (username: string) => {
-    console.log(username);
+    const color = colors[Math.floor(Math.random() * colors.length)];
+
+    socket.username = username;
+
+    const newUser = {
+      username,
+      color
+    };
+
+    users.push(newUser);
+
+    sendRoomData();
+    sendMessage(0);
   });
-  // io.emit()
-  // socket.emit("sync_to_host", room.currentTime);
+
+  socket.on("leave_chatroom", () => {
+    // Send user leave message directly on disconnecting
+    sendMessage(1);
+  });
 
   socket.on("disconnect", () => {
-    console.log("someone disconnected");
+    const userTypingIndex = isTyping.findIndex(
+      (isTypingUser: string) => isTypingUser === socket.username
+    );
+
+    if (userTypingIndex !== -1) {
+      isTyping.splice(userTypingIndex, 1);
+    }
+
+    const userOnlineIndex = users.findIndex(
+      (user: { username: string }) => user.username === socket.username
+    );
+
+    users.splice(userOnlineIndex, 1);
+
     socket.disconnect();
+
+    sendRoomData();
   });
 });
 
