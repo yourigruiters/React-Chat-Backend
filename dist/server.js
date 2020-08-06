@@ -176,21 +176,17 @@ io.on("connection", (socket) => {
 server.listen(PORT, () => {
     console.log(`Server listening on port: ${PORT}`);
 });
+// Close everything on SIGTERM signal
 process.on("SIGTERM", () => {
-    console.info("SIGTERM signal received.");
-    console.log("Closing http server.");
     server.close(() => {
-        console.log("Http server closed.");
         io.close(() => {
             process.exit(0);
         });
     });
 });
+// Close everything on SIGINT signal
 process.on("SIGINT", () => {
-    console.info("SIGINT signal received.");
-    console.log("Closing http server.");
     server.close(() => {
-        console.log("Http server closed.");
         io.close(() => {
             process.exit(0);
         });
