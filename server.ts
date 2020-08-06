@@ -55,13 +55,31 @@ app.get("/api/user/:username", (req, res) => {
 
 // Socket.io logic
 io.on("connection", (socket: any) => {
-  const activityKicker = () => {
-    // Send user leave message directly on clicking disconnect
-    sendMessage(2);
-
+  // Get and return index of user in user array
+  const getUserOnlineIndex = () => {
     const userOnlineIndex = users.findIndex(
       (user: { username: string }) => user.username === socket.username
     );
+
+    return userOnlineIndex;
+  };
+
+  // Get and return index of user in isTyping array
+  const getUserTypingIndex = () => {
+    const userTypingIndex = isTyping.findIndex(
+      (isTypingUser: string) => isTypingUser === socket.username
+    );
+
+    return userTypingIndex;
+  };
+
+  // Remove user from the chatroom if inactive
+  const activityKicker = () => {
+    // Send activity disconnecting message
+    sendMessage(2);
+
+    const userOnlineIndex = getUserOnlineIndex();
+
     if (userOnlineIndex !== -1) {
       users[userOnlineIndex].active = false;
     }
@@ -69,12 +87,11 @@ io.on("connection", (socket: any) => {
     socket.emit("leave_inactivity");
   };
 
+  // Reset and use activityChecker to remove user if inactive for 5 minutes
   let logoffTimer: any;
   const activityChecker = () => {
-    // clear the timer on activity
     clearTimeout(logoffTimer);
 
-    // Set timer - maximum inactivity of 5 minute
     logoffTimer = setTimeout(activityKicker, 300000);
   };
 
@@ -88,11 +105,9 @@ io.on("connection", (socket: any) => {
     io.emit("new_roomdata", roomData);
   };
 
-  // Send message to all users
+  // Send new message to all users
   const sendMessage = (messageType: number, message?: string) => {
-    const userOnlineIndex = users.findIndex(
-      (user: { username: string }) => user.username === socket.username
-    );
+    const userOnlineIndex = getUserOnlineIndex();
 
     if (userOnlineIndex === -1) {
       return;
@@ -109,6 +124,7 @@ io.on("connection", (socket: any) => {
     io.emit("new_message", newMessage);
   };
 
+  // Send isTyping users to all users
   const changedTyping = (state: boolean) => {
     // Reset activityChecker();
     activityChecker();
@@ -116,9 +132,7 @@ io.on("connection", (socket: any) => {
     if (state) {
       isTyping.push(socket.username);
     } else {
-      const userTypingIndex = isTyping.findIndex(
-        (isTypingUser: string) => isTypingUser === socket.username
-      );
+      const userTypingIndex = getUserTypingIndex();
 
       if (userTypingIndex !== -1) {
         isTyping.splice(userTypingIndex, 1);
@@ -128,10 +142,18 @@ io.on("connection", (socket: any) => {
     io.emit("changed_typing", isTyping);
   };
 
-  // Joining chatroom
+  // User joining a chatroom  - Request roomData
   socket.on("join_chatroom", (username: string) => {
+    const userOnlineIndex = getUserOnlineIndex();
+
+    if (userOnlineIndex !== -1) {
+      socket.emit("leave_inactivity");
+      return;
+    }
+
     const color = colors[Math.floor(Math.random() * colors.length)];
 
+    // Set username to socket for simplified user tracking
     socket.username = username;
 
     const newUser = {
@@ -143,6 +165,7 @@ io.on("connection", (socket: any) => {
     users.push(newUser);
 
     sendRoomData();
+    // Send joining message
     sendMessage(0);
     // Reset activityChecker();
     activityChecker();
@@ -150,12 +173,10 @@ io.on("connection", (socket: any) => {
 
   // Leaving chatroom
   socket.on("leave_chatroom", () => {
-    // Send user leave message directly on clicking disconnect
+    // Send leaving message
     sendMessage(1);
 
-    const userOnlineIndex = users.findIndex(
-      (user: { username: string }) => user.username === socket.username
-    );
+    const userOnlineIndex = getUserOnlineIndex();
 
     if (userOnlineIndex !== -1) {
       users[userOnlineIndex].active = false;
@@ -165,35 +186,37 @@ io.on("connection", (socket: any) => {
     }
   });
 
-  // Changed typing
+  // Changed typing - Call function to resend isTyping
   socket.on("changed_typing", (state: boolean) => {
     changedTyping(state);
   });
 
+  // Default message function called from client
   socket.on("send_message", (message: string) => {
     changedTyping(false);
+    // Send refreshing disconnecting message
     sendMessage(4, message);
   });
 
   // Disconnecting from server in all ways
   socket.on("disconnect", () => {
-    const userTypingIndex = isTyping.findIndex(
-      (isTypingUser: string) => isTypingUser === socket.username
-    );
+    const userTypingIndex = getUserTypingIndex();
 
     if (userTypingIndex !== -1) {
+      // Remove user from list of typing users
       isTyping.splice(userTypingIndex, 1);
     }
 
-    const userOnlineIndex = users.findIndex(
-      (user: { username: string }) => user.username === socket.username
-    );
+    const userOnlineIndex = getUserOnlineIndex();
 
-    // Send user leave message on losing connection when user is active
-    if (users[userOnlineIndex].active) {
-      sendMessage(3);
+    if (users[userOnlineIndex]) {
+      if (users[userOnlineIndex].active) {
+        // Send user connection message if active
+        sendMessage(3);
+      }
     }
 
+    // Remove user from list of online users
     users.splice(userOnlineIndex, 1);
 
     socket.disconnect();
@@ -206,7 +229,7 @@ server.listen(PORT, () => {
   console.log(`Server listening on port: ${PORT}`);
 });
 
-// Close everything on SIGTERM signal
+// Close connections on SIGTERM signal
 process.on("SIGTERM", () => {
   server.close(() => {
     io.close(() => {
@@ -215,7 +238,7 @@ process.on("SIGTERM", () => {
   });
 });
 
-// Close everything on SIGINT signal
+// Close connections on SIGINT signal
 process.on("SIGINT", () => {
   server.close(() => {
     io.close(() => {
