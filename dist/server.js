@@ -28,12 +28,25 @@ const http = __importStar(require("http"));
 const cors_1 = __importDefault(require("cors"));
 const app = express_1.default();
 const server = http.createServer(app);
-const io = socket_io_1.default(server);
+const io = socket_io_1.default(server, { pingInterval: 30000, pingTimeout: 30000 });
 const PORT = process.env.PORT || 5000;
 // Fix: improve any below
 const users = [];
 const isTyping = [];
-const colors = ["#183734", "#885522"];
+const colors = [
+    "#e13838",
+    "#e138a4",
+    "#4438e1",
+    "#38e1db",
+    "#38e16e",
+    "#60e138",
+    "#e1dd38",
+    "#e1be38",
+    "#e18038",
+    "#e15138",
+    "#000000",
+    "#8c8c8c"
+];
 // Use cross-origin resource sharing for communication between 2 locations
 app.use(cors_1.default());
 // Server is running
@@ -53,6 +66,21 @@ app.get("/api/user/:username", (req, res) => {
 });
 // Socket.io logic
 io.on("connection", (socket) => {
+    const activityKicker = () => {
+        console.log("FIREEEE");
+        // Send user leave message directly on clicking disconnect
+        sendMessage(2);
+        const userOnlineIndex = users.findIndex((user) => user.username === socket.username);
+        users[userOnlineIndex].active = false;
+        socket.emit("leave_inactivity");
+    };
+    let logoffTimer;
+    const activityChecker = () => {
+        // clear the timer on activity
+        clearTimeout(logoffTimer);
+        // Set timer - maximum inactivity of 5 minute
+        logoffTimer = setTimeout(activityKicker, 300000);
+    };
     // Send roomData to all users
     const sendRoomData = () => {
         const roomData = {
@@ -73,27 +101,63 @@ io.on("connection", (socket) => {
         };
         io.emit("new_message", newMessage);
     };
+    // Fix: on send message also call changedTyping with false
+    const changedTyping = (state) => {
+        console.log(socket.username, "CHANGED TYPING");
+        // Reset activityChecker();
+        activityChecker();
+        if (state) {
+            isTyping.push(socket.username);
+        }
+        else {
+            const userTypingIndex = isTyping.findIndex((isTypingUser) => isTypingUser === socket.username);
+            if (userTypingIndex !== -1) {
+                isTyping.splice(userTypingIndex, 1);
+            }
+        }
+        io.emit("changed_typing", isTyping);
+    };
+    // Joining chatroom
     socket.on("join_chatroom", (username) => {
         const color = colors[Math.floor(Math.random() * colors.length)];
         socket.username = username;
         const newUser = {
             username,
-            color
+            color,
+            active: true
         };
         users.push(newUser);
         sendRoomData();
         sendMessage(0);
+        // Reset activityChecker();
+        activityChecker();
     });
+    // Leaving chatroom
     socket.on("leave_chatroom", () => {
-        // Send user leave message directly on disconnecting
+        // Send user leave message directly on clicking disconnect
         sendMessage(1);
+        const userOnlineIndex = users.findIndex((user) => user.username === socket.username);
+        users[userOnlineIndex].active = false;
     });
+    // Changed typing
+    socket.on("changed_typing", (state) => {
+        changedTyping(state);
+    });
+    socket.on("send_message", (message) => {
+        changedTyping(false);
+        sendMessage(4, message);
+    });
+    // Disconnecting from server in all ways
     socket.on("disconnect", () => {
         const userTypingIndex = isTyping.findIndex((isTypingUser) => isTypingUser === socket.username);
         if (userTypingIndex !== -1) {
             isTyping.splice(userTypingIndex, 1);
         }
         const userOnlineIndex = users.findIndex((user) => user.username === socket.username);
+        // Send user leave message on losing connection when user is active
+        if (users[userOnlineIndex].active) {
+            sendMessage(3);
+        }
         users.splice(userOnlineIndex, 1);
         socket.disconnect();
         sendRoomData();
