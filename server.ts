@@ -220,6 +220,7 @@ io.on("connection", (socket: any) => {
 
   // Disconnecting from server in all ways
   socket.on("disconnect", () => {
+    clearTimeout(logoffTimer);
     const userTypingIndex = getUserTypingIndex();
 
     if (userTypingIndex !== -1) {
