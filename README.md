@@ -31,6 +31,7 @@ Frontend
 - Sass
 - Classnames
 - Custom webpack config
+- ESlint
 
 Backend
 
@@ -38,6 +39,8 @@ Backend
 - Socket.io
 - Typescript
 - Cors
+- TSlint
+- Winston
 
 Styling
 

@@ -2,6 +2,7 @@ import express from "express";
 import ioserver from "socket.io";
 import * as http from "http";
 import cors from "cors";
+import winston from "winston";
 
 const app = express();
 const server = http.createServer(app);
@@ -11,6 +12,20 @@ const PORT = process.env.PORT || 5000;
 
 const users: { username: string; color: string; active: boolean }[] = [];
 const isTyping: string[] = [];
+
+// Winston logging
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.json(),
+  defaultMeta: { service: "express-socket-logging" },
+  transports: [
+    // - Write all logs with level `info (could add error)' to logfile-info.log
+    new winston.transports.File({
+      filename: "log/logfile-info.log",
+      level: "info"
+    })
+  ]
+});
 
 const colors = [
   "#e13838",
@@ -144,6 +159,7 @@ io.on("connection", (socket: any) => {
 
   // User joining a chatroom  - Request roomData
   socket.on("join_chatroom", (username: string) => {
+    logger.log("info", `${username} has joined the server at ${new Date()}`);
     const userOnlineIndex = getUserOnlineIndex();
 
     if (userOnlineIndex !== -1) {
@@ -173,6 +189,10 @@ io.on("connection", (socket: any) => {
 
   // Leaving chatroom
   socket.on("leave_chatroom", () => {
+    logger.log(
+      "info",
+      `${socket.username} has left the server at ${new Date()}`
+    );
     // Send leaving message
     sendMessage(1);
 
