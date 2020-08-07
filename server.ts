@@ -50,7 +50,7 @@ app.use(cors());
 
 // Server is running
 app.get("/", (req, res) => {
-  res.send("Server up and running");
+  res.status(200).send("Server up and running");
 });
 
 // Check if username is already taken
@@ -249,20 +249,30 @@ server.listen(PORT, () => {
   console.log(`Server listening on port: ${PORT}`);
 });
 
-// Close connections on SIGTERM signal
-process.on("SIGTERM", () => {
-  server.close(() => {
-    io.close(() => {
-      process.exit(0);
-    });
-  });
+// Store connections to the server to close when server is being shut down.
+let connections = <any>[];
+
+server.on("connection", (connection) => {
+  connections.push(connection);
+  connection.on(
+    "close",
+    () => (connections = connections.filter((curr: any) => curr !== connection))
+  );
 });
 
-// Close connections on SIGINT signal
-process.on("SIGINT", () => {
+// Shutdown function to close connections to server
+const shutDown = () => {
   server.close(() => {
     io.close(() => {
       process.exit(0);
     });
   });
-});
+};
+
+// Close connections on SIGTERM signal
+process.on("SIGTERM", shutDown);
+
+// Close connections on SIGINT signal
+process.on("SIGINT", shutDown);
+
+export default server;

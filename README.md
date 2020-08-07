@@ -41,10 +41,23 @@ Backend
 - Cors
 - TSlint
 - Winston
+- Mocha/chat - Failed to implement
 
 Styling
 
 Mobile first responsive design using Sass with flexbox and BEM.
+
+**Positive takeaways...**
+
+- ...improved knowledge on using socket.io, TypeScript and new technologie as Winston;
+- ...used 'any' as little as possible in TypeScript.
+
+**Improvement areas...**
+
+- ...learn how to use mocha/chai with TypeScript files, failed to implement this;
+- ...get deeper knowledge on SIGINT/SIGTERM and logging;
+- ...get every socket.io bug out of the system, there seems to still be one;
+- ...didn't understand how to implement Redux in this application using socket.io, only used as userReducer.
 
 ##### Homepage
 
