@@ -41,7 +41,7 @@ Backend
 - Cors
 - TSlint
 - Winston
-- Mocha/chat - Failed to implement
+- Mocha/chai
 
 Styling
 
@@ -50,11 +50,12 @@ Mobile first responsive design using Sass with flexbox and BEM.
 **Positive takeaways...**
 
 - ...improved knowledge on using socket.io, TypeScript and new technologie as Winston;
-- ...used 'any' as little as possible in TypeScript.
+- ...used 'any' as little as possible in TypeScript;
+- ...express and socket.io unit testing on server side;
 
 **Improvement areas...**
 
-- ...learn how to use mocha/chai with TypeScript files, failed to implement this;
+- ...learn how to properly use mocha/chai with TypeScript files and socket.io overall, had some difficulties here;
 - ...get deeper knowledge on SIGINT/SIGTERM and logging;
 - ...didn't understand how to implement Redux in this application using socket.io, only used as userReducer.
 
