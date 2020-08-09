@@ -32,6 +32,7 @@ Frontend
 - Classnames
 - Custom webpack config
 - ESlint
+- Cypress
 
 Backend
 
@@ -52,6 +53,7 @@ Mobile first responsive design using Sass with flexbox and BEM.
 - ...improved knowledge on using socket.io, TypeScript and new technologie as Winston;
 - ...used 'any' as little as possible in TypeScript;
 - ...express and socket.io unit testing on server side;
+- ...Frontend and backend testing implemented, Cypress was good.
 
 **Improvement areas...**
 
