@@ -11,7 +11,7 @@ const io = ioserver(server, { pingInterval: 30000, pingTimeout: 30000 });
 const PORT = process.env.PORT || 5000;
 
 const users: { username: string; color: string; active: boolean }[] = [
-  { username: "testtaken", color: "red", active: true }
+  { username: "testtaken", color: "red", active: true },
 ];
 const isTyping: string[] = [];
 
@@ -24,9 +24,9 @@ const logger = winston.createLogger({
     // - Write all logs with level `info (could add error)' to logfile-info.log
     new winston.transports.File({
       filename: "log/logfile-info.log",
-      level: "info"
-    })
-  ]
+      level: "info",
+    }),
+  ],
 });
 
 const colors = [
@@ -44,7 +44,7 @@ const colors = [
   "#8c8c8c",
   "#38a2e1",
   "#386ce1",
-  "#6938e1"
+  "#6938e1",
 ];
 
 // Use cross-origin resource sharing for communication between 2 locations
@@ -116,7 +116,7 @@ io.on("connection", (socket: any) => {
   const sendRoomData = () => {
     const roomData = {
       onlineUsers: users,
-      typingUsers: isTyping
+      typingUsers: isTyping,
     };
 
     io.emit("new_roomdata", roomData);
@@ -135,7 +135,7 @@ io.on("connection", (socket: any) => {
       color: users[userOnlineIndex].color,
       type: messageType,
       message: message ? message : "",
-      timestamp: ""
+      timestamp: "",
     };
 
     io.emit("new_message", newMessage);
@@ -177,7 +177,7 @@ io.on("connection", (socket: any) => {
     const newUser = {
       username,
       color,
-      active: true
+      active: true,
     };
 
     users.push(newUser);
@@ -245,11 +245,6 @@ io.on("connection", (socket: any) => {
     socket.disconnect();
 
     sendRoomData();
-  });
-
-  // Testing elements
-  socket.on("echo", (message: string) => {
-    socket.emit("echo", "Hello World");
   });
 });
 
