@@ -10,9 +10,7 @@ const io = ioserver(server, { pingInterval: 30000, pingTimeout: 30000 });
 
 const PORT = process.env.PORT || 5000;
 
-const users: { username: string; color: string; active: boolean }[] = [
-  { username: "testtaken", color: "red", active: true },
-];
+const users: { username: string; color: string; active: boolean }[] = [];
 const isTyping: string[] = [];
 
 // Winston logging
